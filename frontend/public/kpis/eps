@@ -1,0 +1,35 @@
+Earnings Per Share (EPS) shows how much profit a company generates for each share of stock. It's a key profitability indicator.
+The formula is:
+EPS = Net Income / Shares Outstanding
+      or for diluted EPS
+EPS = (Net Income - Preferred Dividends) / Diluted Shares Outstanding
+Example
+If a company has:
+
+Net Income: $10,000,000
+Shares Outstanding: 2,000,000
+EPS = $10,000,000 ÷ 2,000,000 = $5.00
+
+This means each share earned $5.00 in profit this year.
+###### What's considered good?
+Context matters more than absolute numbers:
+
+- Positive EPS - Company is profitable
+- Growing EPS - Profitability improving (most important)
+- 10-15% annual growth - Solid performance
+- Above 20% growth - Strong growth trajectory
+- Negative EPS - Company losing money
+
+Types of EPS:
+
+- Basic EPS - Using current shares outstanding
+- Diluted EPS - Including potential shares from options/convertibles
+- Trailing EPS - Last 12 months actual results
+- Forward EPS - Projected next 12 months
+
+###### Why it matters
+
+- **Per-share profitability** - Standardizes profit across company sizes
+- **P/E ratio component** - Essential for valuation
+- **Growth tracking** - Easy to compare year-over-year
+- **Dividend capacity** - Indicates ability to pay dividends

@@ -1,0 +1,27 @@
+Current Ratio is a liquidity metric that measures a company's ability to pay off its short-term obligations with its short-term assets.
+
+The formula is:
+Current Ratio = Current Assets / Current Liabilities
+
+Example
+If a company has:
+
+Current Assets: $500,000
+Current Liabilities: $250,000
+Current Ratio = $500,000 / $250,000 = 2.0
+
+This means the company has $2 of current assets for every $1 of current liabilities.
+
+###### What's considered good?
+
+- Below 1.0 - Warning sign: company may struggle to pay short-term obligations
+- 1.0 to 1.5 - Adequate, but tight liquidity
+- 1.5 to 3.0 - Generally healthy liquidity
+- Above 3.0 - Very strong liquidity, but might indicate inefficient use of assets
+
+###### Why it matters
+
+- **Short-term solvency** - Shows ability to meet near-term obligations
+- **Working capital health** - Indicates operational liquidity
+- **Creditor confidence** - Banks and suppliers check this ratio
+- **Early warning signal** - Declining ratio can signal trouble ahead

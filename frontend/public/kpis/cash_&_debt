@@ -1,0 +1,30 @@
+Cash & Debt represents a company's liquidity position (cash and equivalents) versus its financial obligations (total debt). The relationship between them shows financial health.
+
+The formula is:
+Net Cash = Cash & Cash Equivalents - Total Debt (or Net Debt = Total Debt - Cash)
+
+Example
+If a company has:
+
+Cash & Equivalents: $500,000
+Short-term Debt: $200,000
+Long-term Debt: $800,000
+Total Debt: $1,000,000
+Net Debt = $1,000,000 - $500,000 = $500,000
+
+This means the company owes $500,000 more than it has in cash.
+
+###### What's considered good?
+
+- Net Cash Position - More cash than debt (very strong)
+- Debt-to-Equity below 0.5 - Conservative leverage
+- Debt-to-Equity 0.5-1.5 - Moderate leverage (typical)
+- Debt-to-Equity above 2.0 - High leverage (risky)
+- Debt-to-EBITDA below 3x - Healthy debt coverage
+
+###### Why it matters
+
+- **Financial flexibility** - Cash provides options during downturns
+- **Bankruptcy risk** - Too much debt relative to cash is dangerous
+- **Growth capacity** - Cash enables investments; debt can fund expansion
+- **Interest burden** - High debt means high interest payments

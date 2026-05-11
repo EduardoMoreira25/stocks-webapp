@@ -1,0 +1,27 @@
+Cash Ratio is the most conservative liquidity metric. It measures a company's ability to pay off its short-term obligations using only its most liquid assets - cash and cash equivalents.
+
+The formula is:
+Cash Ratio = (Cash + Cash Equivalents) / Current Liabilities
+
+Example
+If a company has:
+
+Cash & Cash Equivalents: $100,000
+Current Liabilities: $200,000
+Cash Ratio = $100,000 / $200,000 = 0.5
+
+This means the company has $0.50 in cash for every $1 of short-term obligations.
+
+###### What's considered good?
+
+- Below 0.2 - Very low cash reserves, potential liquidity risk
+- 0.2 to 0.5 - Typical for many companies
+- 0.5 to 1.0 - Strong cash position
+- Above 1.0 - Very strong, can pay all short-term debts with cash alone
+
+###### Why it matters
+
+- **Immediate liquidity** - Shows ability to pay debts with cash on hand
+- **Conservative measure** - More stringent than current ratio
+- **Crisis preparedness** - Higher ratio = better positioned for downturns
+- **Creditor confidence** - Important for lenders and suppliers

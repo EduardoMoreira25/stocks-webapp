@@ -1,0 +1,30 @@
+Debt-to-Equity Ratio measures how much debt a company is using relative to shareholders' equity. It shows the balance between money borrowed and money invested by owners.
+
+The formula is:
+Debt-to-Equity = Total Debt / Shareholders' Equity
+
+Example
+If a company has:
+
+Total Debt: $500,000
+Shareholders' Equity: $1,000,000
+Debt-to-Equity = $500,000 / $1,000,000 = 0.5
+
+This means the company has $0.50 of debt for every $1 of equity.
+
+###### What's considered good?
+
+This varies significantly by industry:
+
+- Below 1.0 - More equity than debt, generally conservative financing
+- 1.0 to 2.0 - Moderate leverage, common in many industries
+- Above 2.0 - High leverage, more financial risk
+- Capital-intensive industries (utilities, telecom) - Often 2.0-3.0+ is normal
+- Tech/software companies - Often below 0.5 or even zero debt
+
+###### Why it matters
+
+- **Financial risk indicator** - Higher ratio means more debt, increasing bankruptcy risk
+- **Capital structure** - Shows how the company finances its operations
+- **Interest obligations** - More debt means more interest payments, affecting profitability
+- **Financial flexibility** - High debt limits ability to borrow more or weather downturns

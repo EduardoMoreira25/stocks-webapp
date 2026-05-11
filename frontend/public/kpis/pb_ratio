@@ -1,0 +1,27 @@
+Price-to-Book (P/B) ratio is a financial valuation metric that compares a company's market value to its book value. It tells you how much investors are willing to pay for each dollar of net assets on the company's balance sheet.
+
+The formula is:
+P/B Ratio = Market Price per Share / Book Value per Share
+
+Example
+If a company has:
+
+Stock Price: $50 per share
+Book Value per Share: $25
+P/B Ratio = $50 / $25 = 2.0
+
+This means investors are paying $2 for every $1 of book value, suggesting they expect growth or value beyond the balance sheet.
+
+###### What's considered good?
+
+- Below 1.0 - Stock may be undervalued (trading below asset value) or company has problems
+- 1.0 to 3.0 - Typical range for most companies
+- Above 3.0 - Stock may be overvalued, or company has strong intangible assets
+- Industry context matters - Banks typically trade at 1-2x, tech companies often 5-10x+
+
+###### Why it matters
+
+- **Asset-based valuation** - Shows what you're paying relative to tangible net worth
+- **Undervalued stocks** - P/B below 1.0 can signal potential value opportunities
+- **Industry comparison** - Most useful for capital-intensive industries (banking, manufacturing, real estate)
+- **Limited for tech** - Less meaningful for companies where value comes from intangible assets, human capital, or intellectual property

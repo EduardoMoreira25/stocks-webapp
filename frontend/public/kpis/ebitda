@@ -1,0 +1,30 @@
+EBITDA (Earnings Before Interest, Taxes, Depreciation & Amortization) measures a company's operating profitability before financing costs and non-cash charges. EV/EBITDA is a valuation metric comparing total company value to these earnings.
+
+The formula is:
+EV/EBITDA = Enterprise Value / EBITDA (where EV = Market Cap + Total Debt - Cash)
+
+Example
+If a company has:
+
+Market Cap: $800M
+Total Debt: $300M
+Cash: $100M
+Enterprise Value = $800M + $300M - $100M = $1,000M
+EBITDA: $100M
+EV/EBITDA = $1,000M / $100M = 10x
+
+This means investors are paying 10 times the company's operating cash earnings for the entire business.
+
+###### What's considered good?
+
+- Below 8x - Potentially undervalued or low growth
+- 8-12x - Fair value for most industries
+- 12-20x - Growth premium or high-quality business
+- Above 20x - Very high growth expectations or premium sector
+
+###### Why it matters
+
+- **M&A valuation** - Standard metric for acquisition pricing
+- **Capital structure neutral** - Compare companies regardless of debt levels
+- **Cross-border comparison** - Not affected by different tax regimes
+- **Cash flow proxy** - EBITDA approximates operating cash flow

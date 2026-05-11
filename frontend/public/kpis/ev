@@ -1,0 +1,29 @@
+Enterprise Value (EV) represents the total value of a company - what you'd have to pay to buy the entire business, including its debt and minus its cash.
+
+The formula is:
+EV = Market Cap + Total Debt - Cash & Cash Equivalents
+
+Example
+If a company has:
+
+Market Cap: $800M (stock price × shares outstanding)
+Total Debt: $300M
+Cash: $100M
+Enterprise Value = $800M + $300M - $100M = $1,000M
+
+This means you'd need $1 billion to acquire the entire company (buy the equity and pay off the debt, offset by cash you'd receive).
+
+###### What's considered good?
+
+EV itself isn't "good" or "bad" - it's used in ratios like EV/EBITDA or EV/Revenue:
+
+- EV/EBITDA below 8x - Potentially undervalued
+- EV/EBITDA 8-12x - Fair value for most industries
+- EV/EBITDA above 15x - Premium valuation or high growth
+
+###### Why it matters
+
+- **True acquisition cost** - What a buyer would actually pay
+- **Capital structure neutral** - Better than market cap for comparisons
+- **M&A standard** - The metric used in buyouts and acquisitions
+- **Debt consideration** - Includes debt burden that market cap ignores

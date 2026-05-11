@@ -1,0 +1,23 @@
+# Dependencies
+frontend/node_modules/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+venv/
+
+# Build output
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Database files
+**/*.db
+**/*.sqlite
+
+# Env / secrets
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store

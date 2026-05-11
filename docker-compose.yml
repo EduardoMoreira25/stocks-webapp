@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: stocks-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env:ro
+    networks:
+      proxy-net:
+        ipv4_address: 172.21.0.20
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: stocks-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      proxy-net:
+        ipv4_address: 172.21.0.21
+
+networks:
+  proxy-net:
+    external: true

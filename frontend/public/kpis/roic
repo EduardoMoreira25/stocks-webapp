@@ -1,0 +1,30 @@
+Return on Invested Capital (ROIC) measures how efficiently a company generates returns from all the capital invested in the business - both equity and debt. It's often considered one of the best measures of management quality and business performance.
+
+The formula is:
+ROIC = NOPAT / Invested Capital (where NOPAT = Operating Income × (1 - Tax Rate))
+
+Example
+If a company has:
+
+Operating Income (EBIT): $200M
+Tax Rate: 25%
+NOPAT = $200M × (1 - 0.25) = $150M
+Invested Capital: $1,000M
+ROIC = $150M / $1,000M = 15%
+
+This means the company generates $0.15 for every $1 of capital invested.
+
+###### What's considered good?
+
+- Below 10% - Poor capital efficiency
+- 10-15% - Average
+- 15-20% - Good
+- Above 20% - Excellent, indicates competitive advantage
+- Above WACC - Creating value for shareholders
+
+###### Why it matters
+
+- **True profitability measure** - Shows returns on ALL capital, not just equity
+- **Capital allocation quality** - High ROIC means management invests wisely
+- **Competitive advantage indicator** - Sustained high ROIC suggests moats
+- **Apples-to-apples comparison** - Not distorted by capital structure like ROE

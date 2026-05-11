@@ -1,0 +1,27 @@
+SBC Impact on FCF measures how much Stock-Based Compensation affects a company's Free Cash Flow. SBC is when companies pay employees with stock/options instead of cash (common in tech companies).
+
+The formula is:
+SBC Impact = Stock-Based Compensation / Free Cash Flow × 100
+
+Example
+If a company has:
+
+Free Cash Flow: $500M
+Stock-Based Compensation: $100M
+SBC Impact = ($100M / $500M) × 100 = 20%
+
+This means 20% of the reported FCF is offset by the dilution cost of stock compensation.
+
+###### What's considered good?
+
+- Below 10% - Minimal impact, FCF is reliable
+- 10-20% - Moderate impact, common in growth companies
+- 20-30% - High impact, FCF may be overstated
+- Above 30% - Very high, significant shareholder dilution
+
+###### Why it matters
+
+- **Real economic cost** - SBC dilutes existing shareholders, it has a real cost
+- **Cash flow quality** - High SBC means reported FCF overstates true cash generation
+- **Tech company analysis** - Particularly important for tech companies where SBC can be 10-30% of revenue
+- **Valuation impact** - SBC-adjusted FCF gives more accurate picture for valuation
