@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Company, MarketMoversResponse, CompanyDetail, KPIHistory, ChartDataPoint, FinancialData, CashFlowMetrics, ValuationMetrics, Portfolio, PortfolioHoldings, Transaction, SymbolTransaction, EarningsEvent, PortfolioPerformance, SectorOverview, SectorHistory } from '../types';
+import type { Company, MarketMoversResponse, CompanyDetail, KPIHistory, ChartDataPoint, FinancialData, CashFlowMetrics, ValuationMetrics, Portfolio, PortfolioHoldings, Transaction, SymbolTransaction, EarningsEvent, PortfolioPerformance, SectorOverview, SectorHistory, CompanyKpiData } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -192,6 +192,12 @@ export const apiService = {
   // Get companies by sector
   getCompaniesBySector: async (sector: string): Promise<{ symbol: string; company_name: string; image_url?: string; industry?: string; market_cap?: number | null }[]> => {
     const response = await api.get(`/sectors/${encodeURIComponent(sector)}/companies`);
+    return response.data;
+  },
+
+  // Get KPI data for all companies in a sector (for client-side filtering)
+  getSectorCompanyKpis: async (sector: string): Promise<CompanyKpiData[]> => {
+    const response = await api.get(`/sectors/${encodeURIComponent(sector)}/companies/kpis`);
     return response.data;
   },
 };

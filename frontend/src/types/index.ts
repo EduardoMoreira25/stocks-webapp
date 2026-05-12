@@ -255,6 +255,37 @@ export interface PortfolioPerformance {
   };
 }
 
+// ==================== Sector KPI Filter Types ====================
+
+export interface CompanyKpiData {
+  symbol: string;
+  net_margin: number | null;
+  gross_margin: number | null;
+  operating_margin: number | null;
+  roe: number | null;
+  roa: number | null;
+  roic: number | null;
+  current_ratio: number | null;
+  cash_ratio: number | null;
+  debt_to_equity: number | null;
+  debt_to_assets: number | null;
+  fcf_ttm: number | null;
+  sbc_impact_on_fcf: number | null;
+  pe_ratio_ttm: number | null;
+  pb_ratio: number | null;
+  ev_to_ebitda_ttm: number | null;
+  market_cap: number | null;
+  revenue: number | null;
+  net_income: number | null;
+  ebitda: number | null;
+  operating_expenses: number | null;
+  eps_diluted: number | null;
+  cash_and_cash_equivalents: number | null;
+  total_debt: number | null;
+  net_debt: number | null;
+  free_cash_flow: number | null;
+}
+
 // ==================== Sector Types ====================
 
 export interface IndustryMarketCap {

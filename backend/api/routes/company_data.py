@@ -9,7 +9,8 @@ from api.services.company_data import (
     get_sector_history,
     get_revenue_segments,
     get_user_segments,
-    get_earnings_calendar
+    get_earnings_calendar,
+    get_sector_company_kpis
 )
 from typing import List, Dict, Optional
 
@@ -224,6 +225,24 @@ def get_sector_companies(sector: str):
     """
     try:
         data = get_companies_by_sector(sector)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sectors/{sector}/companies/kpis")
+def get_sector_companies_kpis(sector: str):
+    """
+    Get latest KPI data for all companies in a sector for client-side filtering.
+
+    Args:
+        sector: Sector name (e.g., Technology, Healthcare)
+
+    Returns:
+        list: KPI data per company symbol
+    """
+    try:
+        data = get_sector_company_kpis(sector)
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

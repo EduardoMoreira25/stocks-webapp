@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiService } from '../services/api';
+import type { CompanyKpiData } from '../types';
 
 interface SectorCompany {
   symbol: string;
@@ -38,11 +39,89 @@ function formatMarketCap(value: number | null | undefined): string | null {
   return `$${value.toLocaleString()}`;
 }
 
+// ─── KPI Filter types & config ─────────────────────────────────────────────
+
+type Operator = '>' | '>=' | '<' | '<=' | '=';
+
+interface FilterRow {
+  id: number;
+  kpi: keyof CompanyKpiData;
+  op: Operator;
+  value: string;
+}
+
+interface KpiOption {
+  value: keyof CompanyKpiData;
+  label: string;
+  unit: string;
+  scale: number; // user input × scale = DB value
+}
+
+const KPI_OPTIONS: KpiOption[] = [
+  // Profitability
+  { value: 'net_margin',              label: 'Net Margin',           unit: '%',  scale: 0.01 },
+  { value: 'gross_margin',            label: 'Gross Margin',         unit: '%',  scale: 0.01 },
+  { value: 'operating_margin',        label: 'Operating Margin',     unit: '%',  scale: 0.01 },
+  { value: 'roe',                     label: 'ROE',                  unit: '%',  scale: 0.01 },
+  { value: 'roa',                     label: 'ROA',                  unit: '%',  scale: 0.01 },
+  { value: 'roic',                    label: 'ROIC',                 unit: '%',  scale: 0.01 },
+  // Liquidity
+  { value: 'current_ratio',           label: 'Current Ratio',        unit: 'x',  scale: 1 },
+  { value: 'cash_ratio',              label: 'Cash Ratio',           unit: 'x',  scale: 1 },
+  // Leverage
+  { value: 'debt_to_equity',          label: 'Debt / Equity',        unit: 'x',  scale: 1 },
+  { value: 'debt_to_assets',          label: 'Debt / Assets',        unit: 'x',  scale: 1 },
+  // Cash Flow
+  { value: 'fcf_ttm',                 label: 'FCF Yield (TTM)',      unit: '%',  scale: 0.01 },
+  { value: 'sbc_impact_on_fcf',       label: 'SBC Impact on FCF',   unit: '%',  scale: 0.01 },
+  // Valuation
+  { value: 'pe_ratio_ttm',            label: 'P/E Ratio (TTM)',      unit: 'x',  scale: 1 },
+  { value: 'pb_ratio',                label: 'P/B Ratio',            unit: 'x',  scale: 1 },
+  { value: 'ev_to_ebitda_ttm',        label: 'EV / EBITDA (TTM)',    unit: 'x',  scale: 1 },
+  { value: 'market_cap',              label: 'Market Cap',           unit: 'B',  scale: 1e9 },
+  // Financials (FY, in billions)
+  { value: 'revenue',                 label: 'Revenue (FY)',         unit: 'B',  scale: 1e9 },
+  { value: 'net_income',              label: 'Net Income (FY)',      unit: 'B',  scale: 1e9 },
+  { value: 'ebitda',                  label: 'EBITDA (FY)',          unit: 'B',  scale: 1e9 },
+  { value: 'operating_expenses',      label: 'OpEx (FY)',            unit: 'B',  scale: 1e9 },
+  { value: 'free_cash_flow',          label: 'Free Cash Flow (FY)',  unit: 'B',  scale: 1e9 },
+  { value: 'eps_diluted',             label: 'EPS Diluted (FY)',     unit: '$',  scale: 1 },
+  // Balance Sheet
+  { value: 'cash_and_cash_equivalents', label: 'Cash & Equiv. (FY)', unit: 'B', scale: 1e9 },
+  { value: 'total_debt',              label: 'Total Debt (FY)',      unit: 'B',  scale: 1e9 },
+  { value: 'net_debt',                label: 'Net Debt (FY)',        unit: 'B',  scale: 1e9 },
+];
+
+const OPERATORS: { value: Operator; label: string }[] = [
+  { value: '>=', label: '>=' },
+  { value: '>',  label: '>' },
+  { value: '<=', label: '<=' },
+  { value: '<',  label: '<' },
+  { value: '=',  label: '=' },
+];
+
+function passesFilter(dbValue: number | null, op: Operator, userInput: number, scale: number): boolean {
+  if (dbValue === null) return false;
+  const threshold = userInput * scale;
+  switch (op) {
+    case '>':  return dbValue > threshold;
+    case '>=': return dbValue >= threshold;
+    case '<':  return dbValue < threshold;
+    case '<=': return dbValue <= threshold;
+    case '=':  return Math.abs(dbValue - threshold) <= Math.abs(threshold) * 1e-6 + 1e-12;
+  }
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────
+
 const SectorDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [companies, setCompanies] = useState<SectorCompany[]>([]);
+  const [companyKpis, setCompanyKpis] = useState<Record<string, CompanyKpiData>>({});
   const [loading, setLoading] = useState(true);
   const [expandedIndustries, setExpandedIndustries] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<FilterRow[]>([]);
+  const [nextId, setNextId] = useState(0);
 
   const meta = SECTOR_META[slug ?? ''];
   const sectorName = meta?.name ?? (slug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? '');
@@ -50,9 +129,18 @@ const SectorDetail: React.FC = () => {
   useEffect(() => {
     if (!sectorName) return;
     setLoading(true);
-    apiService.getCompaniesBySector(sectorName)
-      .then(data => {
-        setCompanies(data);
+    setCompanyKpis({});
+    setFilters([]);
+
+    Promise.all([
+      apiService.getCompaniesBySector(sectorName),
+      apiService.getSectorCompanyKpis(sectorName),
+    ])
+      .then(([companiesData, kpisData]) => {
+        setCompanies(companiesData);
+        const map: Record<string, CompanyKpiData> = {};
+        kpisData.forEach(k => { map[k.symbol] = k; });
+        setCompanyKpis(map);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -66,10 +154,27 @@ const SectorDetail: React.FC = () => {
     });
   };
 
-  // Group companies by industry, sort industries by total market cap
+  // Active filters: rows with a valid numeric value
+  const activeFilters = filters.filter(f => f.value.trim() !== '' && !isNaN(parseFloat(f.value)));
+
+  // Group companies by industry, applying KPI filters first
   const industryGroups: IndustryGroup[] = React.useMemo(() => {
+    const activeF = filters.filter(f => f.value.trim() !== '' && !isNaN(parseFloat(f.value)));
+
+    const visible = activeF.length === 0
+      ? companies
+      : companies.filter(c => {
+          const kpi = companyKpis[c.symbol];
+          if (!kpi) return false;
+          return activeF.every(f => {
+            const opt = KPI_OPTIONS.find(o => o.value === f.kpi)!;
+            const dbVal = kpi[f.kpi] as number | null;
+            return passesFilter(dbVal, f.op, parseFloat(f.value), opt.scale);
+          });
+        });
+
     const map: Record<string, IndustryGroup> = {};
-    for (const c of companies) {
+    for (const c of visible) {
       const key = c.industry ?? 'Other';
       if (!map[key]) map[key] = { name: key, total_market_cap: 0, companies: [] };
       map[key].companies.push(c);
@@ -81,10 +186,24 @@ const SectorDetail: React.FC = () => {
         ...g,
         companies: [...g.companies].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0)),
       }));
-  }, [companies]);
+  }, [companies, companyKpis, filters]);
 
   const sectorTotal = industryGroups.reduce((sum, g) => sum + g.total_market_cap, 0);
   const maxIndustryMC = industryGroups[0]?.total_market_cap ?? 0;
+  const filteredCount = industryGroups.reduce((sum, g) => sum + g.companies.length, 0);
+
+  const addFilter = () => {
+    setFilters(prev => [...prev, { id: nextId, kpi: 'net_margin', op: '>=', value: '' }]);
+    setNextId(n => n + 1);
+  };
+
+  const updateFilter = (id: number, patch: Partial<FilterRow>) => {
+    setFilters(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f));
+  };
+
+  const removeFilter = (id: number) => {
+    setFilters(prev => prev.filter(f => f.id !== id));
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -111,6 +230,103 @@ const SectorDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* KPI Filter Panel */}
+      {!loading && (
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              KPI Filters
+            </span>
+            <button
+              onClick={addFilter}
+              className="flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Filter
+            </button>
+          </div>
+
+          {filters.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              No filters active. Click "Add Filter" to narrow companies by financial metrics.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filters.map(f => {
+                const opt = KPI_OPTIONS.find(o => o.value === f.kpi)!;
+                return (
+                  <div key={f.id} className="flex items-center gap-2 flex-wrap">
+                    {/* KPI selector */}
+                    <select
+                      value={f.kpi}
+                      onChange={e => updateFilter(f.id, { kpi: e.target.value as keyof CompanyKpiData })}
+                      className="text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {KPI_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+
+                    {/* Operator selector */}
+                    <select
+                      value={f.op}
+                      onChange={e => updateFilter(f.id, { op: e.target.value as Operator })}
+                      className="text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 w-16 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      {OPERATORS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+
+                    {/* Value input */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={f.value}
+                        onChange={e => updateFilter(f.id, { value: e.target.value })}
+                        placeholder="0"
+                        className="text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1.5 w-24 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-4">{opt.unit}</span>
+                    </div>
+
+                    {/* Remove */}
+                    <button
+                      onClick={() => removeFilter(f.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      aria-label="Remove filter"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {activeFilters.length > 0 && (
+            <div className="mt-3 flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="font-medium text-gray-900 dark:text-gray-100">{filteredCount}</span>
+                {' '}of{' '}
+                <span className="font-medium text-gray-900 dark:text-gray-100">{companies.length}</span>
+                {' '}companies match
+              </p>
+              <button
+                onClick={() => setFilters([])}
+                className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
           Loading companies...
@@ -118,6 +334,16 @@ const SectorDetail: React.FC = () => {
       ) : companies.length === 0 ? (
         <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
           No companies found in this sector.
+        </div>
+      ) : industryGroups.length === 0 && activeFilters.length > 0 ? (
+        <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400 gap-2">
+          <p>No companies match the active filters.</p>
+          <button
+            onClick={() => setFilters([])}
+            className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
