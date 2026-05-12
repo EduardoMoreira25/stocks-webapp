@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { apiService } from '../services/api';
-import type { Portfolio, PortfolioHoldings, Transaction, PortfolioPerformance } from '../types';
+import type { Portfolio, PortfolioHoldings, Transaction, PortfolioPerformance, Company } from '../types';
 
 // Colors for the pie chart
 const CHART_COLORS = [
@@ -100,6 +100,14 @@ interface AllocationChartProps {
 
 const AllocationChart: React.FC<AllocationChartProps> = ({ holdings, navigate, formatCurrency }) => {
   const [viewMode, setViewMode] = useState<'stocks' | 'sectors'>('stocks');
+  const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
+
+  const toggleSector = (name: string) =>
+    setExpandedSectors(prev => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
 
   // Calculate sector allocation
   const sectorData = React.useMemo(() => {
@@ -113,6 +121,18 @@ const AllocationChart: React.FC<AllocationChartProps> = ({ holdings, navigate, f
     return Object.entries(sectorMap)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+  }, [holdings.holdings]);
+
+  // Group holdings by sector for nested view
+  const companiesBySector = React.useMemo(() => {
+    const map: Record<string, { symbol: string; company_name: string; value: number }[]> = {};
+    holdings.holdings.forEach(h => {
+      const sector = h.sector || 'Unknown';
+      if (!map[sector]) map[sector] = [];
+      map[sector].push({ symbol: h.symbol, company_name: h.company_name || '', value: h.current_value || 0 });
+    });
+    Object.values(map).forEach(arr => arr.sort((a, b) => b.value - a.value));
+    return map;
   }, [holdings.holdings]);
 
   const stockData = holdings.holdings.map((h) => ({
@@ -189,48 +209,87 @@ const AllocationChart: React.FC<AllocationChartProps> = ({ holdings, navigate, f
 
         {/* Legend */}
         <div className="w-full md:w-1/2">
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {chartData.map((item, index) => {
-              const percentage = holdings.total_value > 0
-                ? (item.value / holdings.total_value * 100).toFixed(1)
-                : '0.0';
-              return (
-                <div
-                  key={item.name}
-                  onClick={() => viewMode === 'stocks' && navigate(`/company/${item.name}`)}
-                  className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
-                    viewMode === 'stocks'
-                      ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
-                      : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                    />
-                    <div className="min-w-0">
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {item.name}
-                      </span>
-                      {viewMode === 'stocks' && 'company_name' in item && (
-                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-2 truncate">
-                          {(item as typeof stockData[0]).company_name}
-                        </span>
-                      )}
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {viewMode === 'stocks' ? (
+              stockData.map((item, index) => {
+                const pct = holdings.total_value > 0
+                  ? (item.value / holdings.total_value * 100).toFixed(1) : '0.0';
+                return (
+                  <div
+                    key={item.name}
+                    onClick={() => navigate(`/company/${item.name}`)}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{item.company_name}</span>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{pct}%</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">{formatCurrency(item.value)}</span>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {percentage}%
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                      {formatCurrency(item.value)}
-                    </span>
+                );
+              })
+            ) : (
+              sectorData.map((item, index) => {
+                const pct = holdings.total_value > 0
+                  ? (item.value / holdings.total_value * 100).toFixed(1) : '0.0';
+                const isExpanded = expandedSectors.has(item.name);
+                const companies = companiesBySector[item.name] ?? [];
+                return (
+                  <div key={item.name}>
+                    {/* Sector row */}
+                    <div
+                      onClick={() => toggleSector(item.name)}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</span>
+                        <svg
+                          className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{pct}%</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">{formatCurrency(item.value)}</span>
+                      </div>
+                    </div>
+                    {/* Nested companies */}
+                    {isExpanded && (
+                      <div className="ml-7 mb-1 space-y-0.5">
+                        {companies.map(c => {
+                          const compPct = item.value > 0
+                            ? (c.value / item.value * 100).toFixed(1) : '0.0';
+                          return (
+                            <div
+                              key={c.symbol}
+                              onClick={() => navigate(`/company/${c.symbol}`)}
+                              className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{c.symbol}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{c.company_name}</span>
+                              </div>
+                              <div className="text-right flex-shrink-0 ml-2">
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{compPct}%</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">{formatCurrency(c.value)}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -256,6 +315,9 @@ const Wallet: React.FC = () => {
 
   // Transaction form state
   const [txSymbol, setTxSymbol] = useState('');
+  const [txSymbolResults, setTxSymbolResults] = useState<Company[]>([]);
+  const [txSymbolSearching, setTxSymbolSearching] = useState(false);
+  const symbolInputRef = useRef<HTMLDivElement>(null);
   const [txType, setTxType] = useState<'BUY' | 'SELL'>('BUY');
   const [txQuantity, setTxQuantity] = useState('');
   const [txPrice, setTxPrice] = useState('');
@@ -344,6 +406,26 @@ const Wallet: React.FC = () => {
     }
   };
 
+  const handleSymbolInput = async (value: string) => {
+    const upper = value.toUpperCase();
+    setTxSymbol(upper);
+    if (upper.length < 1) { setTxSymbolResults([]); return; }
+    setTxSymbolSearching(true);
+    try {
+      const results = await apiService.searchCompanies(upper, 7);
+      setTxSymbolResults(results);
+    } catch {
+      setTxSymbolResults([]);
+    } finally {
+      setTxSymbolSearching(false);
+    }
+  };
+
+  const handleSymbolSelect = (company: Company) => {
+    setTxSymbol(company.symbol);
+    setTxSymbolResults([]);
+  };
+
   const handleAddTransaction = async () => {
     if (!selectedPortfolioId || !txSymbol || !txQuantity || !txPrice) return;
 
@@ -363,6 +445,7 @@ const Wallet: React.FC = () => {
       // Reset form
       setShowAddTransactionModal(false);
       setTxSymbol('');
+      setTxSymbolResults([]);
       setTxQuantity('');
       setTxPrice('');
       setTxNotes('');
@@ -717,15 +800,45 @@ const Wallet: React.FC = () => {
                   SELL
                 </button>
               </div>
-              <div>
+              <div className="relative" ref={symbolInputRef}>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Symbol</label>
                 <input
                   type="text"
                   value={txSymbol}
-                  onChange={(e) => setTxSymbol(e.target.value.toUpperCase())}
+                  onChange={(e) => handleSymbolInput(e.target.value)}
                   placeholder="e.g., AAPL"
+                  autoComplete="off"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
+                {/* Autocomplete dropdown */}
+                {(txSymbolResults.length > 0 || txSymbolSearching) && (
+                  <div className="absolute z-10 top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {txSymbolSearching && (
+                      <div className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">Searching...</div>
+                    )}
+                    {txSymbolResults.map((company) => (
+                      <button
+                        key={company.symbol}
+                        type="button"
+                        onMouseDown={() => handleSymbolSelect(company)}
+                        className="w-full px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
+                      >
+                        {company.image_url && (
+                          <img
+                            src={company.image_url}
+                            alt={company.company_name}
+                            className="w-8 h-8 rounded object-contain bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-0.5 flex-shrink-0"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{company.symbol}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{company.company_name}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

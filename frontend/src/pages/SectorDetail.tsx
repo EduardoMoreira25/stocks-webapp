@@ -53,9 +53,6 @@ const SectorDetail: React.FC = () => {
     apiService.getCompaniesBySector(sectorName)
       .then(data => {
         setCompanies(data);
-        // Expand all industries by default
-        const names = new Set(data.map(c => c.industry ?? 'Other'));
-        setExpandedIndustries(names);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
