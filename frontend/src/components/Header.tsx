@@ -207,6 +207,15 @@ const Header: React.FC = () => {
                             Sectors
                           </Link>
                         </li>
+                        <li>
+                          <Link
+                            to="/watchlist"
+                            onClick={() => setIsMenuOpen(false)}
+                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                          >
+                            Watchlist
+                          </Link>
+                        </li>
                       </ul>
                     )}
                   </li>

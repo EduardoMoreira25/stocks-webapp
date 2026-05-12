@@ -325,6 +325,24 @@ export interface SectorHistory {
   snapshots: SectorHistorySnapshot[];
 }
 
+// ==================== Watchlist Types ====================
+
+export interface WatchlistItem {
+  id: number;
+  symbol: string;
+  company_name?: string | null;
+  sector?: string | null;
+  industry?: string | null;
+  image_url?: string | null;
+  current_price?: number | null;
+  market_cap?: number | null;
+  buy_price?: number | null;
+  sell_price?: number | null;
+  note?: string | null;
+  added_at?: string | null;
+  updated_at?: string | null;
+}
+
 // ==================== Calendar Types ====================
 
 export interface EarningsEvent {

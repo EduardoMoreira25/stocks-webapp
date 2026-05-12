@@ -11,6 +11,7 @@ import Wallet from './pages/Wallet';
 import Calendar from './pages/Calendar';
 import Sectors from './pages/Sectors';
 import SectorDetail from './pages/SectorDetail';
+import WatchlistPage from './pages/Watchlist';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             <Route path="/sectors/:slug" element={<SectorDetail />} />
             <Route path="/glossary/company" element={<CompanyGlossary />} />
             <Route path="/glossary/company/:slug" element={<KPIDetail />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/calendar" element={<Calendar />} />
           </Routes>

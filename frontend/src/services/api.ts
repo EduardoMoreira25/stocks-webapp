@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Company, MarketMoversResponse, CompanyDetail, KPIHistory, ChartDataPoint, FinancialData, CashFlowMetrics, ValuationMetrics, Portfolio, PortfolioHoldings, Transaction, SymbolTransaction, EarningsEvent, PortfolioPerformance, SectorOverview, SectorHistory, CompanyKpiData } from '../types';
+import type { Company, MarketMoversResponse, CompanyDetail, KPIHistory, ChartDataPoint, FinancialData, CashFlowMetrics, ValuationMetrics, Portfolio, PortfolioHoldings, Transaction, SymbolTransaction, EarningsEvent, PortfolioPerformance, SectorOverview, SectorHistory, CompanyKpiData, WatchlistItem } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -198,6 +198,35 @@ export const apiService = {
   // Get KPI data for all companies in a sector (for client-side filtering)
   getSectorCompanyKpis: async (sector: string): Promise<CompanyKpiData[]> => {
     const response = await api.get(`/sectors/${encodeURIComponent(sector)}/companies/kpis`);
+    return response.data;
+  },
+
+  // ==================== Watchlist API ====================
+
+  getWatchlist: async (): Promise<WatchlistItem[]> => {
+    const response = await api.get('/api/v1/watchlist');
+    return response.data;
+  },
+
+  getWatchlistStatus: async (symbol: string): Promise<{ symbol: string; on_watchlist: boolean }> => {
+    const response = await api.get(`/api/v1/watchlist/${symbol}/status`);
+    return response.data;
+  },
+
+  addToWatchlist: async (symbol: string): Promise<WatchlistItem> => {
+    const response = await api.post(`/api/v1/watchlist/${symbol}`);
+    return response.data;
+  },
+
+  removeFromWatchlist: async (symbol: string): Promise<void> => {
+    await api.delete(`/api/v1/watchlist/${symbol}`);
+  },
+
+  updateWatchlistItem: async (
+    symbol: string,
+    data: { buy_price?: number | null; sell_price?: number | null; note?: string | null }
+  ): Promise<WatchlistItem> => {
+    const response = await api.patch(`/api/v1/watchlist/${symbol}`, data);
     return response.data;
   },
 };
