@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from api.services.market import get_winners
+from api.services.market import get_winners, get_dashboard_data
 from api.schemas.market import WinnersResponse
 
 router = APIRouter(prefix="/api/v1/market", tags=["Market"])
@@ -73,6 +73,14 @@ def get_weekly_movers_alt(limit: int = Query(default=20, ge=1, le=100)):
         WinnersResponse: List of top performing stocks for the week
     """
     return get_market_winners("weekly", limit)
+
+
+@market_router_alt.get("/dashboard")
+def get_dashboard(limit: int = Query(default=6, ge=1, le=20)):
+    try:
+        return get_dashboard_data(limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @market_router_alt.get("/movers/month")

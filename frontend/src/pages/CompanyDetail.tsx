@@ -39,7 +39,7 @@ const CompanyDetailPage: React.FC = () => {
       const [companyData, chartData, financials, segments, users, txData] = await Promise.all([
         apiService.getCompanyDetail(sym),
         apiService.getChartData(sym, selectedPeriod),
-        apiService.getCompanyFinancials(sym, 'ALL', 5),
+        apiService.getCompanyFinancials(sym, 'ALL', 10),
         apiService.getRevenueSegments(sym).catch(() => null),
         apiService.getUserSegments(sym).catch(() => null),
         apiService.getTransactionsBySymbol(sym).catch(() => ({ transactions: [] })),
@@ -178,21 +178,6 @@ const CompanyDetailPage: React.FC = () => {
     });
   };
 
-  // Find the closest price data point for a transaction date
-  const findClosestPricePoint = (txDate: string) => {
-    let closest = priceData[0];
-    let minDiff = Math.abs(new Date(priceData[0].date).getTime() - new Date(txDate).getTime());
-
-    for (const point of priceData) {
-      const diff = Math.abs(new Date(point.date).getTime() - new Date(txDate).getTime());
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = point;
-      }
-    }
-    return closest;
-  };
-
   const visibleTransactions = getTransactionsInPeriod();
 
   return (
@@ -212,7 +197,14 @@ const CompanyDetailPage: React.FC = () => {
               />
             )}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{company.company_name}</h1>
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(company.company_name + ' company')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-3xl font-bold text-gray-900 dark:text-gray-100 hover:text-teal-600 dark:hover:text-teal-400 hover:underline transition-colors"
+              >
+                {company.company_name}
+              </a>
               <div className="text-lg text-gray-600 dark:text-gray-400 mt-1">{company.symbol}</div>
               <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 <Link
@@ -474,7 +466,7 @@ const CompanyDetailPage: React.FC = () => {
 
       {/* Financial Charts */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Financial Performance (5 Years)</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Financial Performance</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <MiniChart
             title="Revenue"

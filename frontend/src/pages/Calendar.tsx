@@ -85,7 +85,7 @@ const Calendar: React.FC = () => {
   // Get events for a specific day
   const getEventsForDay = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(event => event.report_date === dateStr);
+    return events.filter(event => event.display_date === dateStr);
   };
 
   // Handle day click
@@ -186,7 +186,6 @@ const Calendar: React.FC = () => {
           <div className="grid grid-cols-7">
             {days.map((day, index) => {
               const dayEvents = day ? getEventsForDay(day) : [];
-              const hasEvents = dayEvents.length > 0;
               const displayedEvents = dayEvents.slice(0, 3);
               const remainingCount = dayEvents.length - 3;
 

@@ -5,11 +5,18 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface MiniChartProps {
   title: string;
   data: any[];
-  dataKey: string | string[]; // Support multiple data keys for stacked charts
-  color: string | string[]; // Support multiple colors
+  dataKey: string | string[];
+  color: string | string[];
   formatValue?: (value: number) => string;
   stacked?: boolean;
-  glossarySlug?: string; // Optional link to glossary page
+  glossarySlug?: string;
+}
+
+function getDataForYears(allData: any[], years: number): any[] {
+  const uniqueFYs = [...new Set(allData.map(d => Number(d.fiscal_year)))].sort((a, b) => a - b);
+  if (uniqueFYs.length <= years) return allData;
+  const cutoffFY = uniqueFYs[uniqueFYs.length - years];
+  return allData.filter(d => Number(d.fiscal_year) >= cutoffFY);
 }
 
 const MiniChart: React.FC<MiniChartProps> = ({
@@ -22,6 +29,7 @@ const MiniChart: React.FC<MiniChartProps> = ({
   glossarySlug
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [yearsRange, setYearsRange] = useState<5 | 10>(5);
 
   const defaultFormatter = (value: number) => {
     const absValue = Math.abs(value);
@@ -33,12 +41,14 @@ const MiniChart: React.FC<MiniChartProps> = ({
 
   const formatter = formatValue || defaultFormatter;
 
-  const ChartContent = ({ height }: { height: number }) => {
+  const uniqueFYCount = new Set(data.map(d => d.fiscal_year)).size;
+  const has10Years = uniqueFYCount > 5;
+
+  const ChartContent = ({ chartData, height }: { chartData: any[]; height: number }) => {
     const dataKeys = Array.isArray(dataKey) ? dataKey : [dataKey];
     const colors = Array.isArray(color) ? color : [color];
 
-    // Add period label to each data point for display
-    const dataWithLabels = data.map(item => ({
+    const dataWithLabels = chartData.map(item => ({
       ...item,
       period_label: item.period === 'FY' ? `FY${item.fiscal_year}` : `${item.fiscal_year}${item.period}`
     }));
@@ -85,6 +95,8 @@ const MiniChart: React.FC<MiniChartProps> = ({
   };
 
   if (isExpanded) {
+    const expandedData = getDataForYears(data, yearsRange);
+
     return (
       <div
         className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8"
@@ -96,18 +108,46 @@ const MiniChart: React.FC<MiniChartProps> = ({
         >
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
-            <button
-              onClick={() => setIsExpanded(false)}
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-3">
+              {has10Years && (
+                <div className="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden text-sm">
+                  <button
+                    onClick={() => setYearsRange(5)}
+                    className={`px-3 py-1 transition-colors ${
+                      yearsRange === 5
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    5Y
+                  </button>
+                  <button
+                    onClick={() => setYearsRange(10)}
+                    className={`px-3 py-1 border-l border-gray-200 dark:border-gray-600 transition-colors ${
+                      yearsRange === 10
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    10Y
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
           </div>
-          <ChartContent height={500} />
+          <ChartContent chartData={expandedData} height={500} />
         </div>
       </div>
     );
   }
+
+  const miniData = getDataForYears(data, 5);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 relative transition-colors duration-200">
@@ -132,7 +172,7 @@ const MiniChart: React.FC<MiniChartProps> = ({
           </svg>
         </button>
       </div>
-      <ChartContent height={180} />
+      <ChartContent chartData={miniData} height={180} />
     </div>
   );
 };

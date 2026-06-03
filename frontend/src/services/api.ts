@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Company, MarketMoversResponse, CompanyDetail, KPIHistory, ChartDataPoint, FinancialData, CashFlowMetrics, ValuationMetrics, Portfolio, PortfolioHoldings, Transaction, SymbolTransaction, EarningsEvent, PortfolioPerformance, SectorOverview, SectorHistory, CompanyKpiData, WatchlistItem } from '../types';
+import type { Company, MarketMoversResponse, CompanyDetail, KPIHistory, ChartDataPoint, FinancialData, CashFlowMetrics, ValuationMetrics, Portfolio, PortfolioHoldings, Transaction, SymbolTransaction, EarningsEvent, PortfolioPerformance, SectorOverview, SectorHistory, CompanyKpiData, WatchlistItem, DashboardData } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -9,6 +9,12 @@ const api = axios.create({
 });
 
 export const apiService = {
+  // Dashboard (winners + losers + volume in one call)
+  getDashboardData: async (limit: number = 6): Promise<DashboardData> => {
+    const response = await api.get(`/market/dashboard?limit=${limit}`);
+    return response.data;
+  },
+
   // Market data
   getMarketMovers: async (limit: number = 10): Promise<MarketMoversResponse> => {
     const response = await api.get(`/market/movers?limit=${limit}`);
@@ -198,6 +204,18 @@ export const apiService = {
   // Get KPI data for all companies in a sector (for client-side filtering)
   getSectorCompanyKpis: async (sector: string): Promise<CompanyKpiData[]> => {
     const response = await api.get(`/sectors/${encodeURIComponent(sector)}/companies/kpis`);
+    return response.data;
+  },
+
+  // ==================== Glossary API ====================
+
+  getKpiContent: async (slug: string): Promise<{ slug: string; title: string; content_md: string; updated_at: string | null }> => {
+    const response = await api.get(`/api/v1/glossary/kpis/${slug}`);
+    return response.data;
+  },
+
+  saveKpiContent: async (slug: string, title: string, content_md: string): Promise<{ slug: string; title: string; content_md: string; updated_at: string | null }> => {
+    const response = await api.put(`/api/v1/glossary/kpis/${slug}`, { title, content_md });
     return response.data;
   },
 

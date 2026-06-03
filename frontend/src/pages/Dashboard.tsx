@@ -1,52 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import MoverCard from '../components/MoverCard';
-import type { MarketMoversResponse } from '../types';
+import VolumeCard from '../components/VolumeCard';
+import type { DashboardData, Mover } from '../types';
+
+// ─── Reusable section ────────────────────────────────────────────────────────
+
+const MoversSection: React.FC<{
+  title: string;
+  date: string;
+  winners: Mover[];
+  losers: Mover[];
+  volume?: Mover[];
+}> = ({ title, date, winners, losers, volume }) => (
+  <section className="mb-12">
+    <div className="flex items-baseline gap-3 mb-1">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+      <span className="text-sm text-gray-400 dark:text-gray-500">{date}</span>
+    </div>
+
+    {/* Winners + Losers side by side */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+      {/* Gainers */}
+      <div>
+        <h3 className="text-sm font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-1.5 mb-3">
+          <span>📈</span> Top Gainers
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {winners.map(m => <MoverCard key={m.symbol} mover={m} />)}
+        </div>
+      </div>
+
+      {/* Losers */}
+      <div>
+        <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide flex items-center gap-1.5 mb-3">
+          <span>📉</span> Top Losers
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {losers.map(m => <MoverCard key={m.symbol} mover={m} />)}
+        </div>
+      </div>
+    </div>
+
+    {/* Volume — today only */}
+    {volume && volume.length > 0 && (
+      <div className="mt-6">
+        <h3 className="text-sm font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wide flex items-center gap-1.5 mb-3">
+          <span>🔥</span> Most Traded
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {volume.map(m => <VolumeCard key={m.symbol} mover={m} />)}
+        </div>
+      </div>
+    )}
+  </section>
+);
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 const Dashboard: React.FC = () => {
-  const [todayMovers, setTodayMovers] = useState<MarketMoversResponse | null>(null);
-  const [weekMovers, setWeekMovers] = useState<MarketMoversResponse | null>(null);
-  const [monthMovers, setMonthMovers] = useState<MarketMoversResponse | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadMarketData();
+    apiService.getDashboardData(6)
+      .then(setData)
+      .catch(err => {
+        console.error('Failed to load dashboard data:', err);
+        setError('Failed to load market data. Please try again later.');
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  const loadMarketData = async () => {
-    try {
-      setLoading(true);
-      const [today, week, month] = await Promise.all([
-        apiService.getMarketMovers(7),
-        apiService.getWeeklyMovers(7),
-        apiService.getMonthlyMovers(7),
-      ]);
-      
-      setTodayMovers(today);
-      setWeekMovers(week);
-      setMonthMovers(month);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load market data:', err);
-      setError('Failed to load market data. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
-        <div className="text-xl text-gray-600 dark:text-gray-400">Loading market data...</div>
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="text-xl text-gray-600 dark:text-gray-400">Loading market data…</div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
-        <div className="text-xl text-red-600 dark:text-red-400">{error}</div>
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="text-xl text-red-600 dark:text-red-400">{error ?? 'No data available.'}</div>
       </div>
     );
   }
@@ -54,56 +92,25 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Top Movers Today - 60% viewport */}
-        <section className="mb-12" style={{ minHeight: '60vh' }}>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">Top Movers Today</h2>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Date: {todayMovers?.as_of_date}
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold text-green-700 dark:text-green-500 mb-4">📈 Top Gainers</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todayMovers?.winners.map((mover) => (
-                <MoverCard key={mover.symbol} mover={mover} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Top Movers This Week */}
-        <section className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">Top Movers This Week</h2>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Date: {weekMovers?.as_of_date}
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold text-green-700 dark:text-green-500 mb-4">📈 Top Gainers</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {weekMovers?.winners.map((mover) => (
-                <MoverCard key={mover.symbol} mover={mover} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Top Movers This Month */}
-        <section>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">Top Movers This Month</h2>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Date: {monthMovers?.as_of_date}
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold text-green-700 dark:text-green-500 mb-4">📈 Top Gainers</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {monthMovers?.winners.map((mover) => (
-                <MoverCard key={mover.symbol} mover={mover} />
-              ))}
-            </div>
-          </div>
-        </section>
+        <MoversSection
+          title="Top Movers Today"
+          date={data.as_of_date}
+          winners={data.today.winners}
+          losers={data.today.losers}
+          volume={data.today.volume}
+        />
+        <MoversSection
+          title="Top Movers This Week"
+          date={data.week.comparison_date ? `vs ${data.week.comparison_date}` : ''}
+          winners={data.week.winners}
+          losers={data.week.losers}
+        />
+        <MoversSection
+          title="Top Movers This Month"
+          date={data.month.comparison_date ? `vs ${data.month.comparison_date}` : ''}
+          winners={data.month.winners}
+          losers={data.month.losers}
+        />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from api.services.balance import get_balance_sheets_by_symbol
 from api.routes import market, companies, company_data, portfolio
 from api.routes import watchlist
+from api.routes import glossary
 
 # Create the app instance
 app = FastAPI(
@@ -17,6 +18,7 @@ app.include_router(companies.router)
 app.include_router(company_data.router)
 app.include_router(portfolio.router)
 app.include_router(watchlist.router)
+app.include_router(glossary.router)
 
 
 # A simple test endpoint

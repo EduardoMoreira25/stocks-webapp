@@ -16,12 +16,10 @@ const Header: React.FC = () => {
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
-    
     if (query.length < 2) {
       setSearchResults([]);
       return;
     }
-
     setIsSearching(true);
     try {
       const results = await apiService.searchCompanies(query, 8);
@@ -40,12 +38,50 @@ const Header: React.FC = () => {
     navigate(`/company/${symbol}`);
   };
 
+  const SearchDropdown = () => (
+    <>
+      {searchResults.length > 0 && (
+        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+          {searchResults.map((company) => (
+            <button
+              key={company.symbol}
+              onClick={() => handleSelectCompany(company.symbol)}
+              className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
+            >
+              {company.image_url && (
+                <img
+                  src={company.image_url}
+                  alt={company.company_name}
+                  className="w-8 h-8 rounded object-contain bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-1 flex-shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{company.symbol}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{company.company_name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">{company.sector}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {isSearching && (
+        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 text-center text-sm text-gray-500 dark:text-gray-400 z-50">
+          Searching...
+        </div>
+      )}
+    </>
+  );
+
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Left Section - Hamburger Menu */}
-          <div className="flex-1 flex justify-start items-center gap-2">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+
+        {/* Main row: icons left, logo absolutely centered, search right (desktop only) */}
+        <div className="relative flex items-center justify-between h-14 sm:h-16">
+
+          {/* Left: hamburger + dark mode */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-navy"
@@ -55,8 +91,6 @@ const Header: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-
-            {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
               className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-navy"
@@ -75,76 +109,53 @@ const Header: React.FC = () => {
             </button>
           </div>
 
-          {/* Center - Logo */}
-          <Link to="/" className="flex-shrink-0">
-            <div className="bg-orange-600 px-6 py-2 rounded">
-              <span className="text-white font-bold text-xl tracking-wide">INSIGHTS</span>
+          {/* Logo — absolutely centered in the row on all screen sizes */}
+          <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex-shrink-0">
+            <div className="bg-orange-600 px-4 sm:px-6 py-1.5 sm:py-2 rounded">
+              <span className="text-white font-bold text-base sm:text-xl tracking-wide">INSIGHTS</span>
             </div>
           </Link>
 
-          {/* Right Section - Search Bar */}
-          <div className="flex-1 flex justify-end">
+          {/* Right: search bar — desktop only, hidden on mobile */}
+          <div className="hidden sm:flex items-center flex-shrink-0">
             <div className="relative w-80">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search companies..."
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-transparent"
+              />
+              <SearchDropdown />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile-only search row — sits below the icon/logo row */}
+        <div className="sm:hidden pb-2">
+          <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search companies..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-transparent"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-transparent"
             />
-            
-            {/* Search Results Dropdown */}
-            {searchResults.length > 0 && (
-              <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto">
-                {searchResults.map((company) => (
-                  <button
-                    key={company.symbol}
-                    onClick={() => handleSelectCompany(company.symbol)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0 flex items-center gap-3"
-                  >
-                    {company.image_url && (
-                      <img
-                        src={company.image_url}
-                        alt={company.company_name}
-                        className="w-10 h-10 rounded object-contain bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-1 flex-shrink-0"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">{company.symbol}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{company.company_name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-500">{company.sector}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isSearching && (
-              <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 text-center text-gray-500 dark:text-gray-400">
-                Searching...
-              </div>
-            )}
-            </div>
+            <SearchDropdown />
           </div>
         </div>
+
       </div>
 
       {/* Slide-out Menu */}
       {isMenuOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsMenuOpen(false)}
           />
-
-          {/* Menu Panel */}
           <div className="fixed top-0 left-0 h-full w-72 bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-in-out">
             <div className="flex flex-col h-full">
-              {/* Menu Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Menu</h2>
                 <button
@@ -158,7 +169,6 @@ const Header: React.FC = () => {
                 </button>
               </div>
 
-              {/* Menu Items */}
               <nav className="flex-1 overflow-y-auto p-4">
                 <ul className="space-y-2">
                   {/* Home */}
@@ -187,32 +197,20 @@ const Header: React.FC = () => {
                       <span className="flex-1 text-left font-medium text-gray-900 dark:text-gray-100">Companies</span>
                       <svg
                         className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isCompaniesOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-
-                    {/* Companies Submenu */}
                     {isCompaniesOpen && (
                       <ul className="ml-8 mt-2 space-y-2">
                         <li>
-                          <Link
-                            to="/sectors"
-                            onClick={() => setIsMenuOpen(false)}
-                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                          >
+                          <Link to="/sectors" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                             Sectors
                           </Link>
                         </li>
                         <li>
-                          <Link
-                            to="/watchlist"
-                            onClick={() => setIsMenuOpen(false)}
-                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                          >
+                          <Link to="/watchlist" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                             Watchlist
                           </Link>
                         </li>
@@ -222,11 +220,7 @@ const Header: React.FC = () => {
 
                   {/* Wallet */}
                   <li>
-                    <Link
-                      to="/wallet"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
+                    <Link to="/wallet" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                       <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
@@ -236,11 +230,7 @@ const Header: React.FC = () => {
 
                   {/* Calendar */}
                   <li>
-                    <Link
-                      to="/calendar"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
+                    <Link to="/calendar" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                       <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
@@ -260,32 +250,20 @@ const Header: React.FC = () => {
                       <span className="flex-1 text-left font-medium text-gray-900 dark:text-gray-100">Glossary</span>
                       <svg
                         className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isGlossaryOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-
-                    {/* Glossary Submenu */}
                     {isGlossaryOpen && (
                       <ul className="ml-8 mt-2 space-y-2">
                         <li>
-                          <Link
-                            to="/glossary/company"
-                            onClick={() => setIsMenuOpen(false)}
-                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                          >
+                          <Link to="/glossary/company" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                             Company
                           </Link>
                         </li>
                         <li>
-                          <Link
-                            to="/glossary/indices"
-                            onClick={() => setIsMenuOpen(false)}
-                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                          >
+                          <Link to="/glossary/indices" onClick={() => setIsMenuOpen(false)} className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                             Indices
                           </Link>
                         </li>

@@ -30,6 +30,19 @@ export interface MarketMoversResponse {
   winners: Mover[];
 }
 
+export interface DashboardPeriod {
+  comparison_date: string;
+  winners: Mover[];
+  losers: Mover[];
+}
+
+export interface DashboardData {
+  as_of_date: string;
+  today: DashboardPeriod & { volume: Mover[] };
+  week: DashboardPeriod;
+  month: DashboardPeriod;
+}
+
 export interface CompanyKPIs {
   profitability: {
     net_margin: number | null;
@@ -349,7 +362,8 @@ export interface EarningsEvent {
   symbol: string;
   company_name: string;
   image_url?: string;
-  report_date: string;
+  display_date: string;       // actual_filing_date ?? expected_filing_date ?? report_date
+  report_date: string;        // fiscal quarter end date
   expected_filing_date?: string;
   fiscal_year: number;
   fiscal_period: string;

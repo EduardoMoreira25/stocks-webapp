@@ -234,12 +234,15 @@ def get_company_financials(symbol: str, period: str = 'ALL', years: int = 5) -> 
             ON i.symbol = b.symbol AND i.date = b.date AND i.period = b.period
         LEFT JOIN gold.g_financial_statement_cashflow cf
             ON i.symbol = cf.symbol AND i.date = cf.date AND i.period = cf.period
-        LEFT JOIN gold.g_calculated_kpis kpi
-            ON i.symbol = kpi.symbol AND i.date = kpi.date AND i.period = kpi.period
+        LEFT JOIN (
+            SELECT DISTINCT ON (symbol, date, period) *
+            FROM gold.g_calculated_kpis
+            ORDER BY symbol, date, period
+        ) kpi ON i.symbol = kpi.symbol AND i.date = kpi.date AND i.period = kpi.period
         WHERE i.symbol = %s
             AND i.period IN {period_filter}
             AND i.fiscal_year::integer >= EXTRACT(YEAR FROM CURRENT_DATE)::integer - %s
-        ORDER BY i.date ASC,
+        ORDER BY i.fiscal_year::integer ASC,
             CASE i.period
                 WHEN 'Q1' THEN 1
                 WHEN 'Q2' THEN 2
@@ -247,7 +250,8 @@ def get_company_financials(symbol: str, period: str = 'ALL', years: int = 5) -> 
                 WHEN 'Q4' THEN 4
                 WHEN 'FY' THEN 5
                 ELSE 6
-            END
+            END,
+            i.date ASC
         LIMIT 200
     """
 
@@ -559,20 +563,18 @@ def get_revenue_segments(symbol: str, limit: int = 200) -> Dict:
                 MAX(date) as date,
                 fiscal_year,
                 period,
-                quarter,
                 segment_type,
                 segment_name,
                 SUM(revenue) as revenue
             FROM gold.g_revenue_segments
             WHERE symbol = %s
-            GROUP BY fiscal_year, period, quarter, segment_type, segment_name
+            GROUP BY fiscal_year, period, segment_type, segment_name
         ),
         filtered_segments AS (
             SELECT
                 date,
                 fiscal_year,
                 period,
-                quarter,
                 segment_type,
                 segment_name,
                 revenue
@@ -589,18 +591,16 @@ def get_revenue_segments(symbol: str, limit: int = 200) -> Dict:
                 date,
                 fiscal_year,
                 period,
-                quarter,
                 segment_type,
                 segment_name,
                 revenue,
-                SUM(revenue) OVER (PARTITION BY fiscal_year, quarter, segment_type) as total_revenue
+                SUM(revenue) OVER (PARTITION BY fiscal_year, period, segment_type) as total_revenue
             FROM filtered_segments
         )
         SELECT
             date,
             fiscal_year,
             period,
-            quarter,
             segment_type,
             segment_name,
             revenue,
@@ -610,7 +610,7 @@ def get_revenue_segments(symbol: str, limit: int = 200) -> Dict:
             END as revenue_percentage
         FROM segment_totals
         ORDER BY fiscal_year DESC,
-            CASE quarter
+            CASE period
                 WHEN 'Q1' THEN 1
                 WHEN 'Q2' THEN 2
                 WHEN 'Q3' THEN 3
@@ -631,9 +631,9 @@ def get_revenue_segments(symbol: str, limit: int = 200) -> Dict:
     periods_dict = {}
 
     for row in result:
-        date, fiscal_year, period, quarter, segment_type, segment_name, revenue, revenue_pct = row
-        # Use fiscal_year + quarter as the unique key
-        period_key = f"{fiscal_year}_{quarter}"
+        date, fiscal_year, period, segment_type, segment_name, revenue, revenue_pct = row
+        # period is the quarter identifier (Q1/Q2/Q3/Q4/FY)
+        period_key = f"{fiscal_year}_{period}"
 
         if period_key not in periods_dict:
             periods_dict[period_key] = {
@@ -650,7 +650,7 @@ def get_revenue_segments(symbol: str, limit: int = 200) -> Dict:
             "revenue": float(revenue) if revenue else 0,
             "revenue_percentage": float(revenue_pct) if revenue_pct else 0,
             "fiscal_year": fiscal_year,
-            "quarter": quarter
+            "quarter": period
         }
 
         if segment_type == 'product':
@@ -684,14 +684,13 @@ def get_user_segments(symbol: str, limit: int = 100) -> Dict:
             date,
             fiscal_year,
             period,
-            quarter,
             segment_name,
             revenue as value
         FROM gold.g_revenue_segments
         WHERE symbol = %s
             AND segment_type = 'users'
         ORDER BY fiscal_year DESC,
-            CASE quarter
+            CASE period
                 WHEN 'Q1' THEN 1
                 WHEN 'Q2' THEN 2
                 WHEN 'Q3' THEN 3
@@ -711,7 +710,7 @@ def get_user_segments(symbol: str, limit: int = 100) -> Dict:
     metrics_dict = {}
 
     for row in result:
-        date, fiscal_year, period, quarter, segment_name, value = row
+        date, fiscal_year, period, segment_name, value = row
 
         if segment_name not in metrics_dict:
             metrics_dict[segment_name] = {
@@ -723,7 +722,7 @@ def get_user_segments(symbol: str, limit: int = 100) -> Dict:
             "date": str(date),
             "fiscal_year": fiscal_year,
             "period": period,
-            "quarter": quarter,
+            "quarter": period,
             "value": float(value) if value else 0
         })
 
@@ -867,11 +866,15 @@ def get_earnings_calendar(start_date: str, end_date: str) -> List[Dict]:
         list: Earnings events with company info, ordered by date then market cap (largest first)
     """
     ec_query = """
-        SELECT symbol, report_date, expected_filing_date,
+        SELECT symbol,
+               COALESCE(actual_filing_date, expected_filing_date, report_date) AS display_date,
+               report_date,
+               expected_filing_date,
                fiscal_year, fiscal_period, form_type, is_filed
         FROM earnings_calendar
-        WHERE report_date >= %s AND report_date <= %s
-        ORDER BY report_date ASC
+        WHERE COALESCE(actual_filing_date, expected_filing_date, report_date) >= %s
+          AND COALESCE(actual_filing_date, expected_filing_date, report_date) <= %s
+        ORDER BY COALESCE(actual_filing_date, expected_filing_date, report_date) ASC
     """
     ec_rows = DBConnectorAPP.query(ec_query, [start_date, end_date])
 
@@ -909,14 +912,15 @@ def get_earnings_calendar(start_date: str, end_date: str) -> List[Dict]:
             "symbol": row[0],
             "company_name": info["company_name"],
             "image_url": info["image_url"],
-            "report_date": str(row[1]) if row[1] else None,
-            "expected_filing_date": str(row[2]) if row[2] else None,
-            "fiscal_year": row[3],
-            "fiscal_period": row[4],
-            "form_type": row[5],
-            "is_filed": row[6],
+            "display_date": str(row[1]) if row[1] else None,
+            "report_date": str(row[2]) if row[2] else None,
+            "expected_filing_date": str(row[3]) if row[3] else None,
+            "fiscal_year": row[4],
+            "fiscal_period": row[5],
+            "form_type": row[6],
+            "is_filed": row[7],
             "market_cap": info["market_cap"]
         })
 
-    events.sort(key=lambda x: (x["report_date"] or "", -(x["market_cap"] or 0)))
+    events.sort(key=lambda x: (x["display_date"] or "", -(x["market_cap"] or 0)))
     return events
