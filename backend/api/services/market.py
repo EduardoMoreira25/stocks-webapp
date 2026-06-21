@@ -125,45 +125,32 @@ def get_winners(period: str, limit: int = 10) -> Dict:
 
 
 def get_dashboard_data(limit: int = 6) -> Dict:
-    latest_date = get_latest_trading_day()
-    daily_comp   = get_trading_day_offset(1)
-    weekly_comp  = get_trading_day_offset(5)
-    monthly_comp = get_trading_day_offset(20)
+    # All data comes from mart_price_snapshot — a pre-computed table rebuilt daily.
+    # Replaces 8+ runtime self-joins with 4 simple indexed reads.
 
-    if not latest_date:
-        return {}
+    PERIOD_FIELDS = {
+        "day":   ("prev_day_price",   "day_change_pct"),
+        "week":  ("prev_week_price",  "week_change_pct"),
+        "month": ("prev_month_price", "month_change_pct"),
+    }
 
-    def fetch_movers(comp_date: Optional[str], lim: int):
-        if not comp_date:
-            return [], []
-        query = """
-            WITH changes AS (
-                SELECT
-                    cp.symbol,
-                    c.companyname  AS company_name,
-                    c.sector,
-                    c.image_url,
-                    cp.current_price,
-                    pp.previous_price,
-                    (cp.current_price - pp.previous_price)                          AS change,
-                    ((cp.current_price - pp.previous_price) / pp.previous_price * 100) AS change_percent,
-                    cp.volume
-                FROM (
-                    SELECT symbol, close AS current_price, volume
-                    FROM silver.s_stock_prices_daily WHERE date = %s
-                ) cp
-                JOIN (
-                    SELECT symbol, close AS previous_price
-                    FROM silver.s_stock_prices_daily WHERE date = %s
-                ) pp ON cp.symbol = pp.symbol
-                LEFT JOIN gold.g_company c ON cp.symbol = c.symbol
-                WHERE pp.previous_price > 0
-            )
-            (SELECT *, 'w' AS mtype FROM changes ORDER BY change_percent DESC LIMIT %s)
+    def fetch_movers(period: str, lim: int):
+        prev_price_col, chg_col = PERIOD_FIELDS[period]
+        # Column names are hardcoded constants, not user input — f-string is safe here.
+        query = f"""
+            (SELECT symbol, company_name, sector, image_url,
+                    current_price, {prev_price_col} AS previous_price,
+                    {chg_col} AS change_percent, volume
+             FROM gold.mart_price_snapshot WHERE {chg_col} IS NOT NULL
+             ORDER BY {chg_col} DESC LIMIT %s)
             UNION ALL
-            (SELECT *, 'l' AS mtype FROM changes ORDER BY change_percent ASC  LIMIT %s)
+            (SELECT symbol, company_name, sector, image_url,
+                    current_price, {prev_price_col} AS previous_price,
+                    {chg_col} AS change_percent, volume
+             FROM gold.mart_price_snapshot WHERE {chg_col} IS NOT NULL
+             ORDER BY {chg_col} ASC LIMIT %s)
         """
-        rows = DBConnectorFinancials.query(query, [latest_date, comp_date, lim, lim])
+        rows = DBConnectorFinancials.query(query, [lim, lim])
 
         def to_mover(r):
             return {
@@ -173,39 +160,22 @@ def get_dashboard_data(limit: int = 6) -> Dict:
                 "image_url":      r[3],
                 "current_price":  float(r[4]) if r[4] else None,
                 "previous_price": float(r[5]) if r[5] else None,
-                "change":         float(r[6]) if r[6] else None,
-                "change_percent": float(r[7]) if r[7] else None,
-                "volume":         int(r[8])   if r[8] else None,
+                "change_percent": float(r[6]) if r[6] else None,
+                "volume":         int(r[7])   if r[7] else None,
             }
 
-        winners = [to_mover(r) for r in rows if r[9] == 'w']
-        losers  = [to_mover(r) for r in rows if r[9] == 'l']
-        return winners, losers
+        half = len(rows) // 2
+        return [to_mover(r) for r in rows[:half]], [to_mover(r) for r in rows[half:]]
 
-    # Top 3 by volume today, enriched with today's price change
-    vol_query = """
-        SELECT
-            cp.symbol,
-            c.companyname AS company_name,
-            c.sector,
-            c.image_url,
-            cp.close AS current_price,
-            pp.close AS previous_price,
-            cp.volume,
-            CASE WHEN pp.close > 0
-                 THEN ((cp.close - pp.close) / pp.close * 100)
-                 ELSE NULL END AS change_percent
-        FROM silver.s_stock_prices_daily cp
-        LEFT JOIN gold.g_company c ON cp.symbol = c.symbol
-        LEFT JOIN (
-            SELECT symbol, close
-            FROM silver.s_stock_prices_daily WHERE date = %s
-        ) pp ON cp.symbol = pp.symbol
-        WHERE cp.date = %s
-        ORDER BY cp.volume DESC
+    vol_rows = DBConnectorFinancials.query("""
+        SELECT symbol, company_name, sector, image_url,
+               current_price, prev_day_price AS previous_price,
+               volume, day_change_pct AS change_percent
+        FROM gold.mart_price_snapshot
+        WHERE volume IS NOT NULL
+        ORDER BY volume DESC
         LIMIT 3
-    """
-    vol_rows = DBConnectorFinancials.query(vol_query, [daily_comp, latest_date])
+    """)
     volume = [
         {
             "symbol":         r[0],
@@ -220,12 +190,24 @@ def get_dashboard_data(limit: int = 6) -> Dict:
         for r in vol_rows
     ]
 
-    today_w, today_l = fetch_movers(daily_comp,   limit)
-    week_w,  week_l  = fetch_movers(weekly_comp,  limit)
-    month_w, month_l = fetch_movers(monthly_comp, limit)
+    # Grab comparison dates from the mart (single row, all dates pre-computed)
+    meta = DBConnectorFinancials.query("""
+        SELECT price_date, prev_day_date, prev_week_date, prev_month_date
+        FROM gold.mart_price_snapshot
+        WHERE prev_day_date IS NOT NULL
+        LIMIT 1
+    """)
+    as_of_date  = str(meta[0][0]) if meta else get_latest_trading_day()
+    daily_comp  = str(meta[0][1]) if meta and meta[0][1] else None
+    week_comp   = str(meta[0][2]) if meta and meta[0][2] else None
+    month_comp  = str(meta[0][3]) if meta and meta[0][3] else None
+
+    today_w, today_l = fetch_movers("day",   limit)
+    week_w,  week_l  = fetch_movers("week",  limit)
+    month_w, month_l = fetch_movers("month", limit)
 
     return {
-        "as_of_date": latest_date,
+        "as_of_date": as_of_date,
         "today": {
             "comparison_date": daily_comp,
             "winners": today_w,
@@ -233,12 +215,12 @@ def get_dashboard_data(limit: int = 6) -> Dict:
             "volume":  volume,
         },
         "week": {
-            "comparison_date": weekly_comp,
+            "comparison_date": week_comp,
             "winners": week_w,
             "losers":  week_l,
         },
         "month": {
-            "comparison_date": monthly_comp,
+            "comparison_date": month_comp,
             "winners": month_w,
             "losers":  month_l,
         },

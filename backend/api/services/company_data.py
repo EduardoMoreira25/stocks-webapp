@@ -376,27 +376,11 @@ def search_companies(query: str, limit: int = 10) -> List[Dict]:
 
 
 def get_companies_by_sector(sector: str) -> List[Dict]:
-    """
-    Get all companies in a specific sector
-
-    Args:
-        sector: Sector name
-
-    Returns:
-        list: Companies in the sector with market cap
-    """
     query = """
-        SELECT c.symbol, c.companyname AS company_name, c.image_url, c.industry, sp.market_cap
-        FROM gold.g_company c
-        LEFT JOIN LATERAL (
-            SELECT market_cap
-            FROM silver.s_stock_prices_daily
-            WHERE symbol = c.symbol
-            ORDER BY date DESC
-            LIMIT 1
-        ) sp ON true
-        WHERE c.sector = %s
-        ORDER BY c.companyname ASC
+        SELECT symbol, company_name, image_url, industry, market_cap
+        FROM gold.mart_company_kpi_snapshot
+        WHERE sector = %s
+        ORDER BY company_name ASC
     """
 
     result = DBConnectorFinancials.query(query, [sector])
@@ -739,83 +723,32 @@ def get_user_segments(symbol: str, limit: int = 100) -> Dict:
 def get_sector_company_kpis(sector_name: str) -> List[Dict]:
     """
     Get latest KPI data for all companies in a sector, used for client-side filtering.
+    Reads from mart_company_kpi_snapshot — a pre-joined table rebuilt daily.
     """
     query = """
         SELECT
-            c.symbol,
-            k.net_margin,
-            k.gross_margin,
-            k.operating_margin,
-            k.roe,
-            k.roa,
-            k.roic,
-            k.current_ratio,
-            k.cash_ratio,
-            k.debt_to_equity,
-            k.debt_to_assets,
-            k.fcf_ttm,
-            k.sbc_impact_on_fcf,
-            k.pe_ratio_ttm,
-            k.pb_ratio,
-            k.ev_to_ebitda_ttm,
-            sp.market_cap,
-            i.revenue,
-            i.net_income,
-            i.ebitda,
-            i.operating_expenses,
-            i.eps_diluted,
-            b.cash_and_cash_equivalents,
-            b.total_debt,
-            (b.cash_and_cash_equivalents - COALESCE(b.total_debt, 0)) AS net_debt,
-            cf.free_cash_flow
-        FROM gold.g_company c
-        LEFT JOIN LATERAL (
-            SELECT net_margin, gross_margin, operating_margin, roe, roa, roic,
-                   current_ratio, cash_ratio, debt_to_equity, debt_to_assets,
-                   fcf_ttm, sbc_impact_on_fcf, pe_ratio_ttm, pb_ratio, ev_to_ebitda_ttm
-            FROM gold.g_calculated_kpis
-            WHERE symbol = c.symbol
-            ORDER BY date DESC
-            LIMIT 1
-        ) k ON true
-        LEFT JOIN LATERAL (
-            SELECT market_cap
-            FROM silver.s_stock_prices_daily
-            WHERE symbol = c.symbol
-            ORDER BY date DESC
-            LIMIT 1
-        ) sp ON true
-        LEFT JOIN LATERAL (
-            SELECT revenue, net_income, ebitda, operating_expenses, eps_diluted
-            FROM gold.g_financial_statement_income
-            WHERE symbol = c.symbol AND period = 'FY'
-            ORDER BY date DESC
-            LIMIT 1
-        ) i ON true
-        LEFT JOIN LATERAL (
-            SELECT cash_and_cash_equivalents, total_debt
-            FROM gold.g_financial_statement_balance
-            WHERE symbol = c.symbol AND period = 'FY'
-            ORDER BY date DESC
-            LIMIT 1
-        ) b ON true
-        LEFT JOIN LATERAL (
-            SELECT free_cash_flow
-            FROM gold.g_financial_statement_cashflow
-            WHERE symbol = c.symbol AND period = 'FY'
-            ORDER BY date DESC
-            LIMIT 1
-        ) cf ON true
-        WHERE c.sector = %s
+            symbol,
+            net_margin, gross_margin, operating_margin,
+            roe, roa, roic,
+            current_ratio, cash_ratio,
+            debt_to_equity, debt_to_assets,
+            fcf_ttm, sbc_impact_on_fcf,
+            pe_ratio_ttm, pb_ratio, ev_to_ebitda_ttm,
+            market_cap,
+            revenue, net_income, ebitda, operating_expenses, eps_diluted,
+            cash_and_cash_equivalents, total_debt, net_cash AS net_debt,
+            free_cash_flow
+        FROM gold.mart_company_kpi_snapshot
+        WHERE sector = %s
     """
 
     result = DBConnectorFinancials.query(query, [sector_name])
 
+    def f(v):
+        return float(v) if v is not None else None
+
     kpis = []
     for row in result:
-        def f(v):
-            return float(v) if v is not None else None
-
         (symbol, net_margin, gross_margin, operating_margin, roe, roa, roic,
          current_ratio, cash_ratio, debt_to_equity, debt_to_assets,
          fcf_ttm, sbc_impact_on_fcf, pe_ratio_ttm, pb_ratio, ev_to_ebitda_ttm,
